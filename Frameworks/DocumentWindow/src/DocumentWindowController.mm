@@ -218,6 +218,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		self.tabBarView.frameSize = self.tabBarView.intrinsicContentSize;
 		_titlebarViewController.view = self.tabBarView;
 		_titlebarViewController.fullScreenMinHeight = NSHeight(self.tabBarView.frame);
+		if(@available(macos 10.15, *))
+			_titlebarViewController.automaticallyAdjustsSize = NO; // Recent macOS versions otherwise make the tab bar taller than its 23 pt
 		[self.window addTitlebarAccessoryViewController:_titlebarViewController];
 
 		OakAddAutoLayoutViewsToSuperview(@[ self.layoutView ], self.window.contentView);

@@ -8,6 +8,16 @@
 @property (nonatomic) NSScrollView* scrollView;
 @end
 
+// Starting with macOS 26 the window background is (nearly) white, so we use the gray of earlier releases rather than letting the window background show through
+static NSColor* ClassicWindowBackgroundColor () API_AVAILABLE(macos(10.15))
+{
+	return [NSColor colorWithName:@"OakClassicWindowBackgroundColor" dynamicProvider:^NSColor*(NSAppearance* appearance){
+		BOOL isDarkMode = [[appearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqualToString:NSAppearanceNameDarkAqua];
+		CGFloat white = (isDarkMode ? 50 : 236) / 255.0;
+		return [NSColor colorWithSRGBRed:white green:white blue:white alpha:1];
+	}];
+}
+
 @implementation FileBrowserView
 - (instancetype)initWithFrame:(NSRect)aRect
 {
@@ -69,8 +79,17 @@
 		_scrollView.automaticallyAdjustsContentInsets = NO;
 		_scrollView.contentInsets = insets;
 
-		_outlineView.backgroundColor = NSColor.clearColor;
-		_scrollView.drawsBackground  = NO;
+		if(@available(macos 10.15, *))
+		{
+			_outlineView.backgroundColor = ClassicWindowBackgroundColor();
+			_scrollView.backgroundColor  = ClassicWindowBackgroundColor();
+			_scrollView.drawsBackground  = YES;
+		}
+		else
+		{
+			_outlineView.backgroundColor = NSColor.clearColor;
+			_scrollView.drawsBackground  = NO;
+		}
 	}
 	return self;
 }

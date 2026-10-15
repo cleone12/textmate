@@ -47,8 +47,6 @@
 	<string>NSApplication</string>
 	<key>NSSupportsAutomaticGraphicsSwitching</key>
 	<true/>
-	<key>UIDesignRequiresCompatibility</key>
-	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
