@@ -333,6 +333,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 	[_arrayController unbind:NSContentBinding];
 
+	[self rememberFileBrowserVisibility];
+
 	self.documents           = nil;
 	self.selectedDocument    = nil;
 	self.fileBrowserVisible  = NO; // Make window frame small as we no longer respond to savableWindowFrame
@@ -732,6 +734,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 + (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication*)sender
 {
+	[SortedControllers().firstObject rememberFileBrowserVisibility];
+
 	NSMutableArray<DocumentWindowController*>* controllers = [NSMutableArray array];
 	NSMutableArray<OakDocument*>* documents = [NSMutableArray array];
 	for(DocumentWindowController* controller in SortedControllers())
@@ -1818,7 +1822,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 			self.fileBrowser = [[FileBrowserViewController alloc] init];
 			self.fileBrowser.delegate = self;
 			[self.fileBrowser setupViewWithState:_fileBrowserHistory];
-			if(!_fileBrowserHistory)
+			if(!self.fileBrowser.URL) // No saved state or it had no location, which would leave the file browser blank
 			{
 				if([NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserStartOnFavoritesKey])
 					[self.fileBrowser goToFavorites:self];
@@ -1887,6 +1891,12 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 - (IBAction)toggleFileBrowser:(id)sender
 {
 	self.fileBrowserVisible = !self.fileBrowserVisible;
+	[self rememberFileBrowserVisibility];
+}
+
+// New windows show the file browser if it was visible in the window last toggled, closed, or frontmost when quitting
+- (void)rememberFileBrowserVisibility
+{
 	[NSUserDefaults.standardUserDefaults setBool:self.fileBrowserVisible forKey:kUserDefaultsFileBrowserVisibleInNewWindowsKey];
 }
 

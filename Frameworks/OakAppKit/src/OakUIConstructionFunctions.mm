@@ -255,7 +255,7 @@ OakRolloverButton* OakCreateCloseButton (NSString* accessibilityLabel)
 	{
 		NSColor* color = value;
 		[color set];
-		NSRectFill(aRect);
+		NSRectFill(NSIntersectionRect(aRect, self.bounds)); // With the macOS 14 SDK views no longer clip to bounds, so a 1 pt divider would otherwise paint over its neighbours
 	}
 }
 @end
