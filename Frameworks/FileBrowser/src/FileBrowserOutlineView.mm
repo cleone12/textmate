@@ -1,4 +1,6 @@
 #import "FileBrowserOutlineView.h"
+#import "FileItemTableCellView.h"
+#import <Preferences/Keys.h>
 #import <text/utf8.h>
 #import <ns/ns.h>
 
@@ -23,6 +25,20 @@
 
 	if([self.delegate respondsToSelector:@selector(outlineView:didCollapseItem:collapseChildren:)])
 		[(id <FileBrowserOutlineViewDelegate>)self.delegate outlineView:self didCollapseItem:someItem collapseChildren:flag];
+}
+
+- (BOOL)validateProposedFirstResponder:(NSResponder*)responder forEvent:(NSEvent*)event
+{
+	// Unless clicking the icon should open the item, let the click fall through to the row so it is treated like any other click (select on single click, open on double click)
+	if(event.type == NSEventTypeLeftMouseDown && [responder isKindOfClass:[NSButton class]] && ![NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserOpenOnIconClickKey])
+	{
+		NSView* view = (NSView*)responder;
+		while(view && ![view isKindOfClass:[FileItemTableCellView class]])
+			view = view.superview;
+		if(view && ((FileItemTableCellView*)view).openButton == responder)
+			return NO;
+	}
+	return [super validateProposedFirstResponder:responder forEvent:event];
 }
 
 - (void)showContextMenu:(id)sender

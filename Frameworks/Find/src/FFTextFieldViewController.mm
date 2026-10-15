@@ -201,6 +201,11 @@ static void* kFirstResponderContext = &kFirstResponderContext;
 		if(lastNewline.location == NSNotFound || lastNewline.location < NSMaxRange(insertionPoint))
 			return [self showHistory:self], YES;
 	}
+	else if(command == @selector(insertNewline:) && (NSApp.currentEvent.modifierFlags & NSEventModifierFlagShift))
+	{
+		// Return triggers the default button (Next), so let Shift-Return go the other way
+		return [NSApp sendAction:@selector(findPrevious:) to:nil from:self];
+	}
 	return NO;
 }
 

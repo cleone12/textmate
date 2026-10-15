@@ -15,6 +15,7 @@
 @property (nonatomic, readonly) NSString*        path; // Returns self.URL.filePathURL.path
 @property (nonatomic, readonly) NSURL*           directoryURLForNewItems;
 @property (nonatomic, readonly) NSArray<NSURL*>* selectedFileURLs;
+@property (nonatomic, readonly) BOOL             showsFavorites;
 
 @property (nonatomic, readonly) NSView*          headerView;
 @property (nonatomic, readonly) NSOutlineView*   outlineView;

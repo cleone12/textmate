@@ -20,17 +20,20 @@ static NSArray* default_environment ()
 static NSDictionary* default_settings ()
 {
 	return @{
-		kUserDefaultsHTMLOutputPlacementKey:     @"window",
-		kUserDefaultsFileBrowserPlacementKey:    @"right",
-		kUserDefaultsShowFileExtensionsKey:      @NO,
-		kUserDefaultsEnvironmentVariablesKey:    default_environment(),
-		kUserDefaultsDisableBundleUpdatesKey:    @NO,
-		kUserDefaultsDisableRMateServerKey:      @NO,
-		kUserDefaultsRMateServerListenKey:       kRMateServerListenLocalhost,
-		kUserDefaultsRMateServerPortKey:         @"52698",
-		kUserDefaultsLicenseOwnerKey:            NSFullUserName(),
-		kUserDefaultsLineNumbersKey:             @YES,
-		kUserDefaultsCrashReportsContactInfoKey: NSFullUserName() ?: @"Anonymous",
+		kUserDefaultsHTMLOutputPlacementKey:           @"window",
+		kUserDefaultsFileBrowserPlacementKey:          @"right",
+		kUserDefaultsFileBrowserOpenOnIconClickKey:    @NO,
+		kUserDefaultsFileBrowserStartOnFavoritesKey:   @YES,
+		kUserDefaultsFileBrowserRememberVisibilityKey: @YES,
+		kUserDefaultsShowFileExtensionsKey:            @NO,
+		kUserDefaultsEnvironmentVariablesKey:          default_environment(),
+		kUserDefaultsDisableBundleUpdatesKey:          @NO,
+		kUserDefaultsDisableRMateServerKey:            @NO,
+		kUserDefaultsRMateServerListenKey:             kRMateServerListenLocalhost,
+		kUserDefaultsRMateServerPortKey:               @"52698",
+		kUserDefaultsLicenseOwnerKey:                  NSFullUserName(),
+		kUserDefaultsLineNumbersKey:                   @YES,
+		kUserDefaultsCrashReportsContactInfoKey:       NSFullUserName() ?: @"Anonymous",
 	};
 }
 
@@ -63,6 +66,10 @@ NSString* const kUserDefaultsShowFileExtensionsKey             = @"showFileExten
 NSString* const kUserDefaultsInitialFileBrowserURLKey          = @"initialFileBrowserURL";
 NSString* const kUserDefaultsFileBrowserPlacementKey           = @"fileBrowserPlacement";
 NSString* const kUserDefaultsFileBrowserSingleClickToOpenKey   = @"fileBrowserSingleClickToOpen";
+NSString* const kUserDefaultsFileBrowserOpenOnIconClickKey     = @"fileBrowserOpenOnIconClick";
+NSString* const kUserDefaultsFileBrowserStartOnFavoritesKey    = @"fileBrowserStartOnFavorites";
+NSString* const kUserDefaultsFileBrowserRememberVisibilityKey  = @"fileBrowserRememberVisibility";
+NSString* const kUserDefaultsFileBrowserVisibleInNewWindowsKey = @"fileBrowserVisibleInNewWindows";
 NSString* const kUserDefaultsFileBrowserOpenAnimationDisabled  = @"fileBrowserOpenAnimationDisabled";
 NSString* const kUserDefaultsFileBrowserStyleKey               = @"fileBrowserStyle";
 NSString* const kUserDefaultsHTMLOutputPlacementKey            = @"htmlOutputPlacement";

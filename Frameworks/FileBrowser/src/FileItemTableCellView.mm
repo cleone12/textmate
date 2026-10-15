@@ -3,6 +3,7 @@
 #import <OakAppKit/OakUIConstructionFunctions.h>
 #import <OakAppKit/OakFinderTag.h>
 #import <TMFileReference/TMFileReference.h>
+#import <Preferences/Keys.h>
 
 @interface FileItemSelectBasenameCell : NSTextFieldCell
 @end
@@ -161,7 +162,8 @@ static void* kObjectValueURLObserverContext = &kObjectValueURLObserverContext;
 
 - (void)resetCursorRects
 {
-	[self addCursorRect:_openButton.frame cursor:NSCursor.pointingHandCursor];
+	if([NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserOpenOnIconClickKey])
+		[self addCursorRect:_openButton.frame cursor:NSCursor.pointingHandCursor];
 }
 @end
 

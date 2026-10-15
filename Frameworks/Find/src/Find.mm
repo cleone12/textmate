@@ -32,6 +32,7 @@ static NSString* const kUserDefaultsFolderOptionsKey               = @"Folder Se
 static NSString* const kUserDefaultsFindResultsHeightKey           = @"findResultsHeight";
 static NSString* const kUserDefaultsDefaultFindGlobsKey            = @"defaultFindInFolderGlobs";
 static NSString* const kUserDefaultsKeepSearchResultsOnDoubleClick = @"keepSearchResultsOnDoubleClick";
+static NSString* const kUserDefaultsKeepFindWindowOpenOnReturn     = @"keepFindWindowOpenOnReturn";
 static NSString* const kSearchMarkIdentifier                       = @"search";
 static NSString* const FFFindWasTriggeredByEnter                   = @"FFFindWasTriggeredByEnter";
 
@@ -155,7 +156,8 @@ static NSButton* OakCreateHistoryButton (NSString* toolTip)
 + (void)initialize
 {
 	[NSUserDefaults.standardUserDefaults registerDefaults:@{
-		kUserDefaultsDefaultFindGlobsKey: @[ @"*", @"*.txt", @"*.{c,h}" ],
+		kUserDefaultsDefaultFindGlobsKey:        @[ @"*", @"*.txt", @"*.{c,h}" ],
+		kUserDefaultsKeepFindWindowOpenOnReturn: @YES,
 	}];
 }
 
@@ -339,6 +341,8 @@ static NSButton* OakCreateHistoryButton (NSString* toolTip)
 			{ @"Hidden Folders",                       @selector(toggleSearchHiddenFolders:), .indent = 1 },
 			{ @"Symbolic Links to Folders",            @selector(toggleSearchFolderLinks:),   .indent = 1 },
 			{ @"Symbolic Links to Files",              @selector(toggleSearchFileLinks:),     .indent = 1 },
+			{ /* -------- */ },
+			{ @"Keep Window Open on Return",           @selector(toggleKeepWindowOpenOnReturn:)           },
 			{ /* -------- */ },
 			{ @"Collapse Results",                     @selector(toggleCollapsedState:),      @"1", .modifierFlags = NSEventModifierFlagCommand|NSEventModifierFlagOption, .target = _resultsViewController },
 			{ @"Select Result",                        .delegate = self                                   },
@@ -776,6 +780,12 @@ static NSButton* OakCreateHistoryButton (NSString* toolTip)
 - (IBAction)toggleSearchFileLinks:(id)sender     { self.searchFileLinks     = !self.searchFileLinks;     }
 - (IBAction)toggleSearchBinaryFiles:(id)sender   { self.searchBinaryFiles   = !self.searchBinaryFiles;   }
 
+- (IBAction)toggleKeepWindowOpenOnReturn:(id)sender
+{
+	BOOL flag = [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsKeepFindWindowOpenOnReturn];
+	[NSUserDefaults.standardUserDefaults setBool:!flag forKey:kUserDefaultsKeepFindWindowOpenOnReturn];
+}
+
 - (IBAction)takeLevelToFoldFrom:(id)sender       { [_resultsViewController toggleCollapsedState:sender];                    }
 - (IBAction)selectNextResult:(id)sender          { [_resultsViewController selectNextResultWrapAround:self.wrapAround];     }
 - (IBAction)selectPreviousResult:(id)sender      { [_resultsViewController selectPreviousResultWrapAround:self.wrapAround]; }
@@ -1009,7 +1019,7 @@ static NSButton* OakCreateHistoryButton (NSString* toolTip)
 			case FindActionReplace:        _findOperation = kFindOperationReplace;                                                          break;
 		}
 
-		self.closeWindowOnSuccess = action == FindActionFindNext && [[NSApp currentEvent] type] == NSEventTypeKeyDown && to_s([NSApp currentEvent]) == utf8::to_s(NSCarriageReturnCharacter);
+		self.closeWindowOnSuccess = action == FindActionFindNext && [[NSApp currentEvent] type] == NSEventTypeKeyDown && to_s([NSApp currentEvent]) == utf8::to_s(NSCarriageReturnCharacter) && ![NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsKeepFindWindowOpenOnReturn];
 		self.findMatches = nil;
 		[NSApp sendAction:@selector(performFindOperation:) to:nil from:self];
 	}
@@ -1391,6 +1401,8 @@ static NSButton* OakCreateHistoryButton (NSString* toolTip)
 		aMenuItem.state = self.searchFileLinks ? NSControlStateValueOn : NSControlStateValueOff;
 	else if(aMenuItem.action == @selector(toggleSearchBinaryFiles:))
 		aMenuItem.state = self.searchBinaryFiles ? NSControlStateValueOn : NSControlStateValueOff;
+	else if(aMenuItem.action == @selector(toggleKeepWindowOpenOnReturn:))
+		aMenuItem.state = [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsKeepFindWindowOpenOnReturn] ? NSControlStateValueOn : NSControlStateValueOff;
 	else if(aMenuItem.action == @selector(goToParentFolder:))
 		res = self.searchFolder != nil || _searchTarget == FFSearchTargetFileBrowserItems && CommonAncestor(_fileBrowserItems);
 	else if(aMenuItem.action == @selector(goBack:))

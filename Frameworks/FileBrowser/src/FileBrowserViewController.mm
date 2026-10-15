@@ -255,6 +255,7 @@ static NSMutableIndexSet* MutableLongestCommonSubsequence (NSArray* lhs, NSArray
 - (NSView*)headerView                { return self.fileBrowserView.headerView;              }
 - (NSOutlineView*)outlineView        { return self.fileBrowserView.outlineView;             }
 - (NSString*)path                    { return self.URL.filePathURL.path;                    }
+- (BOOL)showsFavorites               { return [self.URL isEqual:kURLLocationFavorites];      }
 - (NSArray<NSURL*>*)selectedFileURLs { return [[self.selectedItems filteredArrayUsingPredicate:[NSPredicate predicateWithFormat:@"URL.isFileURL == YES"]] valueForKeyPath:@"URL"]; }
 
 - (BOOL)canGoBack                    { return _historyIndex > 0; }
@@ -2069,6 +2070,12 @@ static NSMutableIndexSet* MutableLongestCommonSubsequence (NSArray* lhs, NSArray
 - (id)outlineView:(NSOutlineView*)outlineView objectValueForTableColumn:(NSTableColumn*)tableColumn byItem:(FileItem*)item
 {
 	return item;
+}
+
+- (NSString*)outlineView:(NSOutlineView*)outlineView typeSelectStringForTableColumn:(NSTableColumn*)tableColumn item:(FileItem*)item
+{
+	// View-based outline views only support type-select when the delegate provides the string to match against
+	return item.URL.isFileURL ? item.localizedName : nil;
 }
 
 - (id <NSPasteboardWriting>)outlineView:(NSOutlineView*)outlineView pasteboardWriterForItem:(FileItem*)item

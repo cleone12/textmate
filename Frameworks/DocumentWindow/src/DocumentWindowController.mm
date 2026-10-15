@@ -90,6 +90,8 @@ static void show_command_error (std::string const& message, oak::uuid_t const& u
 	scm::info_ptr                          _documentSCMInfo;
 	std::map<std::string, std::string>     _documentSCMVariables;
 	std::vector<std::string>               _documentScopeAttributes; // attr.os-version, attr.untitled / attr.rev-path + kSettingsScopeAttributesKey
+
+	BOOL                                   _didSetFileBrowserVisible; // When NO, showing the window applies the file browser visibility remembered for new windows
 }
 @property (nonatomic) NSTitlebarAccessoryViewController* titlebarViewController;
 @property (nonatomic) ProjectLayoutView*          layoutView;
@@ -167,6 +169,15 @@ namespace
 	static bool is_disposable (OakDocument* doc)
 	{
 		return doc && !doc.isDocumentEdited && !doc.isOnDisk && !doc.path && doc.isLoaded && doc.isBufferEmpty;
+	}
+
+	// A window with a single untitled, empty document which we can use for opening documents or folders.
+	// A visible file browser normally makes it a project window, but not if the file browser is only showing because new windows remember its visibility.
+	static bool is_scratch_window (DocumentWindowController* controller)
+	{
+		if(controller.documents.count != 1 || !is_disposable(controller.selectedDocument))
+			return false;
+		return !controller.fileBrowserVisible || !controller.defaultProjectPath && [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserRememberVisibilityKey];
 	}
 }
 
@@ -336,6 +347,13 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		self.documents = @[ defaultDocument ];
 		[self openAndSelectDocument:defaultDocument activate:YES];
 	}
+
+	if(!std::exchange(_didSetFileBrowserVisible, YES))
+	{
+		if([NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserRememberVisibilityKey] && [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserVisibleInNewWindowsKey])
+			self.fileBrowserVisible = YES;
+	}
+
 	[self.window makeKeyAndOrderFront:sender];
 }
 
@@ -1534,7 +1552,8 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 	if(_selectedDocument = newDocument)
 	{
-		NSString* projectPath = self.defaultProjectPath ?: self.fileBrowser.path ?: [newDocument.path stringByDeletingLastPathComponent];
+		NSString* fileBrowserPath = self.fileBrowser.showsFavorites ? nil : self.fileBrowser.path;
+		NSString* projectPath = self.defaultProjectPath ?: fileBrowserPath ?: [newDocument.path stringByDeletingLastPathComponent];
 		if(projectPath)
 		{
 			std::map<std::string, std::string> const map = { { "projectDirectory", to_s(projectPath) } };
@@ -1790,6 +1809,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 
 - (void)setFileBrowserVisible:(BOOL)makeVisibleFlag
 {
+	_didSetFileBrowserVisible = YES;
 	if(_fileBrowserVisible != makeVisibleFlag)
 	{
 		_fileBrowserVisible = makeVisibleFlag;
@@ -1800,7 +1820,9 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 			[self.fileBrowser setupViewWithState:_fileBrowserHistory];
 			if(!_fileBrowserHistory)
 			{
-				if(NSString* path = self.projectPath ?: self.defaultProjectPath)
+				if([NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserStartOnFavoritesKey])
+					[self.fileBrowser goToFavorites:self];
+				else if(NSString* path = self.projectPath ?: self.defaultProjectPath)
 					[self.fileBrowser goToURL:[NSURL fileURLWithPath:path]];
 			}
 
@@ -1862,7 +1884,11 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	[[self class] scheduleSessionBackup:self];
 }
 
-- (IBAction)toggleFileBrowser:(id)sender    { self.fileBrowserVisible = !self.fileBrowserVisible; }
+- (IBAction)toggleFileBrowser:(id)sender
+{
+	self.fileBrowserVisible = !self.fileBrowserVisible;
+	[NSUserDefaults.standardUserDefaults setBool:self.fileBrowserVisible forKey:kUserDefaultsFileBrowserVisibleInNewWindowsKey];
+}
 
 - (id)fileBrowserHistory                    { return self.fileBrowser.sessionState ?: _fileBrowserHistory; }
 - (CGFloat)fileBrowserWidth                 { return self.layoutView.fileBrowserWidth;   }
@@ -2774,7 +2800,7 @@ static NSUInteger DisableSessionSavingCount = 0;
 
 	if(DocumentWindowController* candidate = [SortedControllers() firstObject])
 	{
-		if(!candidate.fileBrowserVisible && candidate.documents.count == 1 && is_disposable(candidate.selectedDocument))
+		if(is_scratch_window(candidate))
 			return candidate;
 	}
 
@@ -2851,7 +2877,7 @@ static NSUInteger DisableSessionSavingCount = 0;
 	DocumentWindowController* controller = nil;
 	for(DocumentWindowController* candidate in SortedControllers())
 	{
-		if(!candidate.fileBrowserVisible && candidate.documents.count == 1 && is_disposable(candidate.selectedDocument))
+		if(is_scratch_window(candidate))
 		{
 			controller = candidate;
 			break;
@@ -2877,7 +2903,8 @@ static NSUInteger DisableSessionSavingCount = 0;
 		controller.fileBrowserVisible = YES;
 		controller.documents          = @[ [OakDocumentController.sharedInstance untitledDocument] ];
 
-		[controller.fileBrowser goToURL:[NSURL fileURLWithPath:folder]];
+		if(![NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsFileBrowserStartOnFavoritesKey])
+			[controller.fileBrowser goToURL:[NSURL fileURLWithPath:folder]];
 		[controller openAndSelectDocument:controller.documents[controller.selectedTabIndex] activate:YES];
 	}
 	[controller bringToFront];

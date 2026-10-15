@@ -33,6 +33,9 @@
 
 			@"allowExpandingLinks":          kUserDefaultsAllowExpandingLinksKey,
 			@"fileBrowserSingleClickToOpen": kUserDefaultsFileBrowserSingleClickToOpenKey,
+			@"fileBrowserOpenOnIconClick":   kUserDefaultsFileBrowserOpenOnIconClickKey,
+			@"fileBrowserStartOnFavorites":  kUserDefaultsFileBrowserStartOnFavoritesKey,
+			@"rememberFileBrowser":          kUserDefaultsFileBrowserRememberVisibilityKey,
 			@"disableTabReordering":         kUserDefaultsDisableTabReorderingKey,
 			@"disableTabAutoClose":          kUserDefaultsDisableTabAutoCloseKey,
 		};
@@ -121,13 +124,16 @@
 - (void)loadView
 {
 	NSPopUpButton* fileBrowserLocationPopUp            = OakCreatePopUpButton();
+	NSButton* startOnFavoritesCheckBox                 = OakCreateCheckBox(@"Always start on Favorites");
 	NSButton* foldersOnTopCheckBox                     = OakCreateCheckBox(@"Folders on top");
 	NSButton* showLinksAsExpandableCheckBox            = OakCreateCheckBox(@"Show links as expandable");
 	NSButton* openFilesOnSingleClickCheckBox           = OakCreateCheckBox(@"Open files on single click");
+	NSButton* openItemsOnIconClickCheckBox             = OakCreateCheckBox(@"Open items by clicking their icon");
 	NSButton* keepCurrentDocumentSelectedCheckBox      = OakCreateCheckBox(@"Keep current document selected");
 
 	NSPopUpButton* fileBrowserPositionPopUp            = OakCreatePopUpButton();
 	NSButton* adjustWindowWhenToggleingDisplayCheckBox = OakCreateCheckBox(@"Adjust window when toggleing display");
+	NSButton* rememberVisibilityCheckBox               = OakCreateCheckBox(@"Remember visibility for new windows");
 
 	NSButton* showForSingleDocumentCheckBox            = OakCreateCheckBox(@"Show for single document");
 	NSButton* reOrderWhenOpeningAFileCheckBox          = OakCreateCheckBox(@"Re-order when opening a file");
@@ -154,13 +160,16 @@
 
 	NSGridView* gridView = [NSGridView gridViewWithViews:@[
 		@[ OakCreateLabel(@"File browser location:"),  fileBrowserLocationPopUp                 ],
+		@[ NSGridCell.emptyContentView,                startOnFavoritesCheckBox                 ],
 		@[ NSGridCell.emptyContentView,                foldersOnTopCheckBox                     ],
 		@[ NSGridCell.emptyContentView,                showLinksAsExpandableCheckBox            ],
 		@[ NSGridCell.emptyContentView,                openFilesOnSingleClickCheckBox           ],
+		@[ NSGridCell.emptyContentView,                openItemsOnIconClickCheckBox             ],
 		@[ NSGridCell.emptyContentView,                keepCurrentDocumentSelectedCheckBox      ],
 		@[ ],
 		@[ OakCreateLabel(@"Show file browser on:"),   fileBrowserPositionPopUp                 ],
 		@[ NSGridCell.emptyContentView,                adjustWindowWhenToggleingDisplayCheckBox ],
+		@[ NSGridCell.emptyContentView,                rememberVisibilityCheckBox               ],
 		@[ ],
 		@[ OakCreateLabel(@"Document tabs:"),          showForSingleDocumentCheckBox            ],
 		@[ NSGridCell.emptyContentView,                reOrderWhenOpeningAFileCheckBox          ],
@@ -180,17 +189,20 @@
 	for(NSView* textField in @[ includeFilesTextField, nonTextFilesTextField ])
 		[textField.widthAnchor constraintEqualToAnchor:excludeFilesTextField.widthAnchor].active = YES;
 
-	self.view = OakSetupGridViewWithSeparators(gridView, { 5, 8, 12, 16 });
+	self.view = OakSetupGridViewWithSeparators(gridView, { 7, 11, 15, 19 });
 
 	fileBrowserPathPopUp = fileBrowserLocationPopUp;
 	[self updatePathPopUp];
 
 	[foldersOnTopCheckBox                     bind:NSValueBinding       toObject:self withKeyPath:@"foldersOnTop"                 options:nil];
 	[showLinksAsExpandableCheckBox            bind:NSValueBinding       toObject:self withKeyPath:@"allowExpandingLinks"          options:nil];
+	[startOnFavoritesCheckBox                 bind:NSValueBinding       toObject:self withKeyPath:@"fileBrowserStartOnFavorites"  options:nil];
 	[openFilesOnSingleClickCheckBox           bind:NSValueBinding       toObject:self withKeyPath:@"fileBrowserSingleClickToOpen" options:nil];
+	[openItemsOnIconClickCheckBox             bind:NSValueBinding       toObject:self withKeyPath:@"fileBrowserOpenOnIconClick"   options:nil];
 	[keepCurrentDocumentSelectedCheckBox      bind:NSValueBinding       toObject:self withKeyPath:@"autoRevealFile"               options:nil];
 	[fileBrowserPositionPopUp                 bind:NSSelectedTagBinding toObject:self withKeyPath:@"fileBrowserPlacement"         options:@{ NSValueTransformerNameBindingOption: @"OakFileBrowserPlacementSettingsTransformer" }];
 	[adjustWindowWhenToggleingDisplayCheckBox bind:NSValueBinding       toObject:self withKeyPath:@"disableAutoResize"            options:@{ NSValueTransformerNameBindingOption: NSNegateBooleanTransformerName }];
+	[rememberVisibilityCheckBox               bind:NSValueBinding       toObject:self withKeyPath:@"rememberFileBrowser"          options:nil];
 	[showForSingleDocumentCheckBox            bind:NSValueBinding       toObject:self withKeyPath:@"disableTabBarCollapsing"      options:nil];
 	[reOrderWhenOpeningAFileCheckBox          bind:NSValueBinding       toObject:self withKeyPath:@"disableTabReordering"         options:@{ NSValueTransformerNameBindingOption: NSNegateBooleanTransformerName }];
 	[automaticallyCloseUnusedTabsCheckBox     bind:NSValueBinding       toObject:self withKeyPath:@"disableTabAutoClose"          options:@{ NSValueTransformerNameBindingOption: NSNegateBooleanTransformerName }];
