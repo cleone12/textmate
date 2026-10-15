@@ -93,7 +93,8 @@ static void show_command_error (std::string const& message, oak::uuid_t const& u
 
 	BOOL                                   _didSetFileBrowserVisible; // When NO, showing the window applies the file browser visibility remembered for new windows
 }
-@property (nonatomic) NSTitlebarAccessoryViewController* titlebarViewController;
+@property (nonatomic) NSLayoutConstraint*         tabBarHeightConstraint;
+@property (nonatomic) BOOL                        tabBarHidden;
 @property (nonatomic) ProjectLayoutView*          layoutView;
 @property (nonatomic) OakTabBarView*              tabBarView;
 @property (nonatomic) OakDocumentView*            documentView;
@@ -214,19 +215,17 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		self.window.delegate           = self;
 		self.window.releasedWhenClosed = NO;
 
-		_titlebarViewController = [[NSTitlebarAccessoryViewController alloc] init];
-		self.tabBarView.frameSize = self.tabBarView.intrinsicContentSize;
-		_titlebarViewController.view = self.tabBarView;
-		_titlebarViewController.fullScreenMinHeight = NSHeight(self.tabBarView.frame);
-		if(@available(macos 10.15, *))
-			_titlebarViewController.automaticallyAdjustsSize = NO; // Recent macOS versions otherwise make the tab bar taller than its 23 pt
-		[self.window addTitlebarAccessoryViewController:_titlebarViewController];
-
-		OakAddAutoLayoutViewsToSuperview(@[ self.layoutView ], self.window.contentView);
+		// The tab bar is placed in the content view rather than as a titlebar accessory, as macOS 26 and later make titlebar accessories taller than the tab bar
+		OakAddAutoLayoutViewsToSuperview(@[ self.tabBarView, self.layoutView ], self.window.contentView);
 		self.window.initialFirstResponder = self.textView;
 
-		[self.window.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[view]|" options:0 metrics:nil views:@{ @"view": self.layoutView }]];
-		[self.window.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[view]|" options:0 metrics:nil views:@{ @"view": self.layoutView }]];
+		NSDictionary* views = @{ @"tabBar": self.tabBarView, @"view": self.layoutView };
+		[self.window.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[tabBar][view]|" options:0 metrics:nil views:views]];
+		[self.window.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[tabBar]|" options:0 metrics:nil views:views]];
+		[self.window.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[view]|" options:0 metrics:nil views:views]];
+
+		_tabBarHeightConstraint = [self.tabBarView.heightAnchor constraintEqualToConstant:self.tabBarView.intrinsicContentSize.height];
+		_tabBarHeightConstraint.active = YES;
 
 		_arrayController = [[NSArrayController alloc] init];
 		[_arrayController bind:NSContentBinding toObject:self withKeyPath:@"documents" options:nil];
@@ -406,7 +405,14 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}
 
 	BOOL disableTabBarCollapsingKey = [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsDisableTabBarCollapsingKey];
-	self.titlebarViewController.hidden = !disableTabBarCollapsingKey && self.documents.count <= 1;
+	self.tabBarHidden = !disableTabBarCollapsingKey && self.documents.count <= 1;
+}
+
+- (void)setTabBarHidden:(BOOL)flag
+{
+	_tabBarHidden = flag;
+	self.tabBarView.hidden = flag;
+	self.tabBarHeightConstraint.constant = flag ? 0 : self.tabBarView.intrinsicContentSize.height;
 }
 
 - (void)applicationDidBecomeActiveNotification:(NSNotification*)aNotification
@@ -1538,7 +1544,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 	}
 
 	BOOL disableTabBarCollapsingKey = [NSUserDefaults.standardUserDefaults boolForKey:kUserDefaultsDisableTabBarCollapsingKey];
-	self.titlebarViewController.hidden = !disableTabBarCollapsingKey && self.documents.count <= 1;
+	self.tabBarHidden = !disableTabBarCollapsingKey && self.documents.count <= 1;
 
 	[self updateTouchBarButtons];
 	[[self class] scheduleSessionBackup:self];
