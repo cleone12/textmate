@@ -42,6 +42,18 @@ static NSString* const kUserDefaultsHideStatusBarKey = @"hideStatusBar";
 static NSString* const kUserDefaultsDisableBundleSuggestionsKey = @"disableBundleSuggestions";
 static NSString* const kUserDefaultsGrammarsToNeverSuggestKey = @"grammarsToNeverSuggest";
 
+static CGFloat const kTabBarHeight = 28; // Height of the tab bar in the release build running on recent macOS versions
+
+// Starting with macOS 26 the title bar is white. We use the gray of earlier releases, which the tab bar is designed to sit on, so that the title bar and selected tab blend together.
+static NSColor* ClassicTitlebarColor () API_AVAILABLE(macos(10.15))
+{
+	return [NSColor colorWithName:@"OakClassicTitlebarColor" dynamicProvider:^NSColor*(NSAppearance* appearance){
+		if([[appearance bestMatchFromAppearancesWithNames:@[ NSAppearanceNameAqua, NSAppearanceNameDarkAqua ]] isEqualToString:NSAppearanceNameDarkAqua])
+			return [NSColor colorWithSRGBRed:50/255.0 green:50/255.0 blue:50/255.0 alpha:1];
+		return [NSColor colorWithSRGBRed:242/255.0 green:241/255.0 blue:239/255.0 alpha:1];
+	}];
+}
+
 static bool can_reach_host (char const* host)
 {
 	bool res = false;
@@ -215,6 +227,14 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		self.window.delegate           = self;
 		self.window.releasedWhenClosed = NO;
 
+		if(@available(macos 10.15, *))
+		{
+			self.window.titlebarAppearsTransparent = YES;
+			self.window.backgroundColor            = ClassicTitlebarColor();
+		}
+		if(@available(macos 11.0, *))
+			self.window.titlebarSeparatorStyle = NSTitlebarSeparatorStyleNone;
+
 		// The tab bar is placed in the content view rather than as a titlebar accessory, as macOS 26 and later make titlebar accessories taller than the tab bar
 		OakAddAutoLayoutViewsToSuperview(@[ self.tabBarView, self.layoutView ], self.window.contentView);
 		self.window.initialFirstResponder = self.textView;
@@ -224,7 +244,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 		[self.window.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[tabBar]|" options:0 metrics:nil views:views]];
 		[self.window.contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|[view]|" options:0 metrics:nil views:views]];
 
-		_tabBarHeightConstraint = [self.tabBarView.heightAnchor constraintEqualToConstant:self.tabBarView.intrinsicContentSize.height];
+		_tabBarHeightConstraint = [self.tabBarView.heightAnchor constraintEqualToConstant:kTabBarHeight];
 		_tabBarHeightConstraint.active = YES;
 
 		_arrayController = [[NSArrayController alloc] init];
@@ -412,7 +432,7 @@ static NSArray* const kObservedKeyPaths = @[ @"arrayController.arrangedObjects.p
 {
 	_tabBarHidden = flag;
 	self.tabBarView.hidden = flag;
-	self.tabBarHeightConstraint.constant = flag ? 0 : self.tabBarView.intrinsicContentSize.height;
+	self.tabBarHeightConstraint.constant = flag ? 0 : kTabBarHeight;
 }
 
 - (void)applicationDidBecomeActiveNotification:(NSNotification*)aNotification
