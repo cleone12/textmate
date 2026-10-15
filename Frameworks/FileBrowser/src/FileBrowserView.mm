@@ -69,10 +69,8 @@
 		_scrollView.automaticallyAdjustsContentInsets = NO;
 		_scrollView.contentInsets = insets;
 
-		// Paint the window background explicitly: with a clear background, builds using a recent macOS SDK show white behind the file browser
-		_outlineView.backgroundColor = NSColor.windowBackgroundColor;
-		_scrollView.backgroundColor  = NSColor.windowBackgroundColor;
-		_scrollView.drawsBackground  = YES;
+		_outlineView.backgroundColor = NSColor.clearColor;
+		_scrollView.drawsBackground  = NO;
 	}
 	return self;
 }
