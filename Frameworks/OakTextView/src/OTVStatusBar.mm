@@ -22,11 +22,19 @@
 - (BOOL)mouseDownCanMoveWindow                { return NO; }
 - (BOOL)acceptsFirstMouse:(NSEvent*)anEvent   { return YES; }
 
+// Like a button, act on mouse up inside the label
 - (void)mouseDown:(NSEvent*)anEvent
 {
-	if(self.action)
-			[NSApp sendAction:self.action to:self.target from:self];
-	else	[super mouseDown:anEvent];
+	if(!self.action)
+		[super mouseDown:anEvent];
+}
+
+- (void)mouseUp:(NSEvent*)anEvent
+{
+	if(!self.action)
+		return [super mouseUp:anEvent];
+	if(NSMouseInRect([self convertPoint:anEvent.locationInWindow fromView:nil], self.bounds, self.isFlipped))
+		[NSApp sendAction:self.action to:self.target from:self];
 }
 @end
 
@@ -287,8 +295,6 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 	textField.font               = [NSFont monospacedDigitSystemFontOfSize:NSFont.systemFontSize weight:NSFontWeightRegular];
 	textField.placeholderString  = @"line:column";
 	textField.accessibilityLabel = @"Go to line";
-	textField.target             = self;
-	textField.action             = @selector(performGoToLine:);
 	textField.delegate           = self;
 
 	NSView* contentView = [[NSView alloc] initWithFrame:NSZeroRect];
@@ -296,10 +302,14 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 	[contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-8-[textField(==120)]-8-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(textField)]];
 	[contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-8-[textField]-8-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(textField)]];
 
+	NSSize contentSize = contentView.fittingSize;
+	contentView.frame = NSMakeRect(0, 0, contentSize.width, contentSize.height);
+
 	NSViewController* viewController = [NSViewController new];
 	viewController.view = contentView;
 
 	self.goToLinePopover = [NSPopover new];
+	self.goToLinePopover.contentSize           = contentSize;
 	self.goToLinePopover.behavior              = NSPopoverBehaviorTransient;
 	self.goToLinePopover.contentViewController = viewController;
 	self.goToLinePopover.delegate              = self;
@@ -312,22 +322,25 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 	rect.size.width = textWidth;
 
 	[self.goToLinePopover showRelativeToRect:rect ofView:self.selectionField preferredEdge:NSMaxYEdge];
-	[textField.window makeFirstResponder:textField];
 }
 
-- (void)performGoToLine:(NSTextField*)sender
+- (void)goToLineFromTextField:(NSTextField*)textField
 {
-	NSString* str = [sender.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+	NSString* str = [textField.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
 	[self.goToLinePopover close];
 	if(str.length)
 		[self.delegate selectAndCenter:str];
 }
 
+// Handle return here rather than via the text field’s action, as that is also sent when editing ends
 - (BOOL)control:(NSControl*)control textView:(NSTextView*)textView doCommandBySelector:(SEL)command
 {
-	if(command != @selector(cancelOperation:))
+	if(command == @selector(insertNewline:))
+		[self goToLineFromTextField:(NSTextField*)control];
+	else if(command == @selector(cancelOperation:))
+		[self.goToLinePopover close];
+	else
 		return NO;
-	[self.goToLinePopover close];
 	return YES;
 }
 
