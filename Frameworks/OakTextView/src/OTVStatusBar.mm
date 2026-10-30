@@ -49,7 +49,7 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 	return res;
 }
 
-@interface OTVStatusBar () <NSMenuDelegate>
+@interface OTVStatusBar () <NSMenuDelegate, NSTextFieldDelegate, NSPopoverDelegate>
 @property (nonatomic) CGFloat recordingTime;
 @property (nonatomic) NSTimer* recordingTimer;
 
@@ -59,6 +59,7 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 @property (nonatomic) NSPopUpButton* bundleItemsPopUp;
 @property (nonatomic) NSPopUpButton* symbolPopUp;
 @property (nonatomic) NSButton*      macroRecordingButton;
+@property (nonatomic) NSPopover*     goToLinePopover;
 @end
 
 @implementation OTVStatusBar
@@ -91,6 +92,8 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 			NSFontFeatureSettingsAttribute: @[ @{ NSFontFeatureTypeIdentifierKey: @(kNumberSpacingType), NSFontFeatureSelectorIdentifierKey: @(kMonospacedNumbersSelector) } ]
 		}];
 		self.selectionField.font = [NSFont fontWithDescriptor:descriptor size:0];
+		self.selectionField.toolTip = @"Click to go to line";
+		self.selectionField.accessibilityHelp = @"Click to go to line";
 
 		[self setupTabSizeMenu:self];
 
@@ -133,6 +136,9 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 		};
 
 		OakAddAutoLayoutViewsToSuperview([views allValues], self);
+
+		for(NSView* view in @[ line, self.selectionField ])
+			[view addGestureRecognizer:[[NSClickGestureRecognizer alloc] initWithTarget:self action:@selector(showGoToLinePopover:)]];
 		OakSetupKeyViewLoop(@[ self, _grammarPopUp, _tabSizePopUp, _bundleItemsPopUp, _symbolPopUp, _macroRecordingButton ]);
 
 		[self.selectionField setContentHuggingPriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
@@ -247,6 +253,64 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 	[self.bundleItemsPopUp performClick:self];
 }
 
+- (void)showGoToLinePopover:(id)sender
+{
+	if(self.goToLinePopover.isShown)
+		return [self.goToLinePopover close];
+
+	NSTextField* textField = [NSTextField textFieldWithString:self.selectionString ?: @""];
+	textField.font               = [NSFont monospacedDigitSystemFontOfSize:NSFont.systemFontSize weight:NSFontWeightRegular];
+	textField.placeholderString  = @"line:column";
+	textField.accessibilityLabel = @"Go to line";
+	textField.target             = self;
+	textField.action             = @selector(performGoToLine:);
+	textField.delegate           = self;
+
+	NSView* contentView = [[NSView alloc] initWithFrame:NSZeroRect];
+	OakAddAutoLayoutViewsToSuperview(@[ textField ], contentView);
+	[contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"H:|-8-[textField(==120)]-8-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(textField)]];
+	[contentView addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|-8-[textField]-8-|" options:0 metrics:nil views:NSDictionaryOfVariableBindings(textField)]];
+
+	NSViewController* viewController = [NSViewController new];
+	viewController.view = contentView;
+
+	self.goToLinePopover = [NSPopover new];
+	self.goToLinePopover.behavior              = NSPopoverBehaviorTransient;
+	self.goToLinePopover.contentViewController = viewController;
+	self.goToLinePopover.delegate              = self;
+
+	// Point at the line/column text rather than the (possibly much wider) text field
+	NSRect rect = [self.selectionField.cell titleRectForBounds:self.selectionField.bounds];
+	CGFloat textWidth = std::min(self.selectionField.attributedStringValue.size.width, NSWidth(rect));
+	if(self.selectionField.alignment == NSTextAlignmentRight)
+		rect.origin.x = NSMaxX(rect) - textWidth;
+	rect.size.width = textWidth;
+
+	[self.goToLinePopover showRelativeToRect:rect ofView:self.selectionField preferredEdge:NSMaxYEdge];
+	[textField.window makeFirstResponder:textField];
+}
+
+- (void)performGoToLine:(NSTextField*)sender
+{
+	NSString* str = [sender.stringValue stringByTrimmingCharactersInSet:NSCharacterSet.whitespaceCharacterSet];
+	[self.goToLinePopover close];
+	if(str.length)
+		[self.delegate selectAndCenter:str];
+}
+
+- (BOOL)control:(NSControl*)control textView:(NSTextView*)textView doCommandBySelector:(SEL)command
+{
+	if(command != @selector(cancelOperation:))
+		return NO;
+	[self.goToLinePopover close];
+	return YES;
+}
+
+- (void)popoverDidClose:(NSNotification*)aNotification
+{
+	self.goToLinePopover = nil;
+}
+
 // ==============
 // = Properties =
 // ==============
@@ -334,6 +398,7 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 - (void)dealloc
 {
 	[NSNotificationCenter.defaultCenter removeObserver:self];
+	self.goToLinePopover.delegate = nil;
 	self.recordingTimer = nil;
 }
 @end

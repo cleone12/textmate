@@ -1,10 +1,12 @@
 @protocol OTVStatusBarDelegate <NSObject>
 - (void)showBundleItemSelector:(NSPopUpButton*)popUpButton;
 - (void)showSymbolSelector:(NSPopUpButton*)popUpButton;
+- (void)selectAndCenter:(NSString*)aSelectionString;
 @end
 
 @interface OTVStatusBar : NSVisualEffectView
 - (void)showBundlesMenu:(id)sender;
+- (void)showGoToLinePopover:(id)sender;
 @property (nonatomic) NSString* selectionString;
 @property (nonatomic) NSString* grammarName;
 @property (nonatomic) NSString* symbolName;
