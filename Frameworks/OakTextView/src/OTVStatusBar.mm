@@ -9,9 +9,30 @@
 #import <text/ctype.h>
 #import <ns/ns.h>
 
-static NSTextField* OakCreateTextField (NSString* label)
+// A label which sends its action when clicked, instead of letting the click fall through to the status bar or move the window
+@interface OTVClickableTextField : NSTextField
+@end
+
+@implementation OTVClickableTextField
+- (NSView*)hitTest:(NSPoint)aPoint
 {
-	NSTextField* res = [[NSTextField alloc] initWithFrame:NSZeroRect];
+	return NSMouseInRect([self convertPoint:aPoint fromView:self.superview], self.bounds, self.isFlipped) ? self : nil;
+}
+
+- (BOOL)mouseDownCanMoveWindow                { return NO; }
+- (BOOL)acceptsFirstMouse:(NSEvent*)anEvent   { return YES; }
+
+- (void)mouseDown:(NSEvent*)anEvent
+{
+	if(self.action)
+			[NSApp sendAction:self.action to:self.target from:self];
+	else	[super mouseDown:anEvent];
+}
+@end
+
+static NSTextField* OakCreateTextField (NSString* label, Class cls = NSTextField.class)
+{
+	NSTextField* res = [[cls alloc] initWithFrame:NSZeroRect];
 	[res setBordered:NO];
 	[res setEditable:NO];
 	[res setSelectable:NO];
@@ -78,7 +99,7 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 		self.blendingMode = NSVisualEffectBlendingModeWithinWindow;
 		self.state        = NSVisualEffectStateFollowsWindowActiveState;
 
-		self.selectionField               = OakCreateTextField(@"1:1");
+		self.selectionField               = OakCreateTextField(@"1:1", OTVClickableTextField.class);
 		self.grammarPopUp                 = OakCreateStatusBarPopUpButton(@"", @"Grammar");
 		self.tabSizePopUp                 = OakCreateStatusBarPopUpButton();
 		self.tabSizePopUp.pullsDown       = YES;
@@ -112,7 +133,7 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 		[wrappedBundleItemsPopUpButton addConstraints:[NSLayoutConstraint constraintsWithVisualFormat:@"V:|[popup]|" options:0 metrics:nil views:@{ @"popup": self.bundleItemsPopUp }]];
 
 		NSView* topDivider   = OakCreateNSBoxSeparator();
-		NSTextField* line    = OakCreateTextField(@"Line:");
+		NSTextField* line    = OakCreateTextField(@"Line:", OTVClickableTextField.class);
 		NSView* dividerOne   = OakCreateNSBoxSeparator();
 		NSView* dividerTwo   = OakCreateNSBoxSeparator();
 		NSView* dividerThree = OakCreateNSBoxSeparator();
@@ -137,8 +158,12 @@ static NSButton* OakCreateImageToggleButton (NSImage* image, NSString* accessibi
 
 		OakAddAutoLayoutViewsToSuperview([views allValues], self);
 
-		for(NSView* view in @[ line, self.selectionField ])
-			[view addGestureRecognizer:[[NSClickGestureRecognizer alloc] initWithTarget:self action:@selector(showGoToLinePopover:)]];
+		for(NSTextField* textField in @[ line, self.selectionField ])
+		{
+			textField.target = self;
+			textField.action = @selector(showGoToLinePopover:);
+		}
+
 		OakSetupKeyViewLoop(@[ self, _grammarPopUp, _tabSizePopUp, _bundleItemsPopUp, _symbolPopUp, _macroRecordingButton ]);
 
 		[self.selectionField setContentHuggingPriority:NSLayoutPriorityDefaultLow forOrientation:NSLayoutConstraintOrientationHorizontal];
